@@ -5,6 +5,19 @@ import {
 } from "./pdp-usage-log";
 
 export type PdpBugReportCategory = "bug" | "generation" | "editor" | "account" | "other";
+
+/**
+ * 어드민은 PDP Maker 3.0과 리디자인 마법사 1.5가 함께 쓴다.
+ * 접수 화면이 다르므로 source로만 구분한다.
+ */
+export type PdpBugReportSource = "pdp-maker-widget" | "redesign-wizard-15";
+
+export const PDP_BUG_REPORT_SOURCES: Array<{ value: PdpBugReportSource; label: string; shortLabel: string }> = [
+  { value: "pdp-maker-widget", label: "PDP Maker 3.0", shortLabel: "3.0" },
+  { value: "redesign-wizard-15", label: "리디자인 마법사 1.5", shortLabel: "1.5" }
+];
+
+export const DEFAULT_PDP_BUG_REPORT_SOURCE: PdpBugReportSource = "pdp-maker-widget";
 export type PdpBugReportStatus = "new" | "reviewing" | "resolved" | "archived";
 
 export interface PdpBugReportContext {
@@ -23,6 +36,7 @@ export interface PdpBugReportContext {
 }
 
 export interface PdpBugReportInput {
+  source: PdpBugReportSource;
   category: PdpBugReportCategory;
   title: string;
   description: string;
@@ -58,7 +72,6 @@ export interface PdpBugReportAdminEvent {
 export interface PdpBugReportRecord extends PdpBugReportInput {
   id: string;
   status: PdpBugReportStatus;
-  source: "pdp-maker-widget";
   createdAt: string;
   updatedAt: string;
   notifications?: PdpBugReportNotificationStatus[];
@@ -118,6 +131,7 @@ export function normalizePdpBugReportInput(raw: unknown):
   return {
     ok: true,
     value: {
+      source: normalizeBugSource(record.source),
       category,
       title,
       description,
@@ -132,6 +146,19 @@ export function normalizePdpBugReportInput(raw: unknown):
 
 export function getPdpBugReportCategoryLabel(category: PdpBugReportCategory) {
   return PDP_BUG_REPORT_CATEGORIES.find((item) => item.value === category)?.label ?? "기타";
+}
+
+export function getPdpBugReportSourceLabel(source: unknown) {
+  const normalized = normalizeBugSource(source);
+  return PDP_BUG_REPORT_SOURCES.find((item) => item.value === normalized)?.label ?? "PDP Maker 3.0";
+}
+
+// 예전 신고에는 source가 없거나 알 수 없는 값이 들어 있을 수 있어 기본값으로 떨어뜨린다.
+export function normalizeBugSource(value: unknown): PdpBugReportSource {
+  const normalized = cleanLine(value, 40);
+  return PDP_BUG_REPORT_SOURCES.some((item) => item.value === normalized)
+    ? (normalized as PdpBugReportSource)
+    : DEFAULT_PDP_BUG_REPORT_SOURCE;
 }
 
 function normalizeBugCategory(value: unknown): PdpBugReportCategory {

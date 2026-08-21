@@ -3,6 +3,8 @@ import { appendFile, mkdir, readFile, readdir } from "fs/promises";
 import path from "path";
 import { list, put } from "@vercel/blob";
 import {
+  getPdpBugReportSourceLabel,
+  normalizeBugSource,
   normalizePdpBugReportInput,
   type PdpBugReportAdminEvent,
   type PdpBugReportNotificationStatus,
@@ -110,7 +112,6 @@ export async function createPdpBugReport(raw: unknown, request?: Request) {
     ...normalized.value,
     id: createReportId(createdAt),
     status: "new",
-    source: "pdp-maker-widget",
     createdAt,
     updatedAt: createdAt,
     request: {
@@ -449,14 +450,15 @@ async function notifyDiscord(report: PdpBugReportRecord): Promise<PdpBugReportNo
 
   const adminUrl = buildAdminReportUrl(report);
   const payload = {
-    content: `새 PDP Maker 버그신고가 접수되었습니다: ${report.title}`,
+    content: `새 문의가 접수되었습니다 [${getPdpBugReportSourceLabel(report.source)}]: ${report.title}`,
     embeds: [
       {
-        title: `PDP 버그신고 · ${report.title}`,
+        title: `${getPdpBugReportSourceLabel(report.source)} · ${report.title}`,
         description: report.description.slice(0, 1500),
         color: 0x171a1f,
         fields: [
           { name: "접수번호", value: report.id, inline: true },
+          { name: "제품", value: getPdpBugReportSourceLabel(report.source), inline: true },
           { name: "유형", value: report.category, inline: true },
           { name: "답변 이메일", value: report.reporterEmail, inline: true },
           { name: "화면", value: String(report.context.surface || report.context.route || "unknown").slice(0, 220), inline: true },
@@ -500,7 +502,7 @@ async function notifyEmail(report: PdpBugReportRecord): Promise<PdpBugReportNoti
     );
   }
 
-  const subject = `[PDP Maker 버그신고] ${report.title}`;
+  const subject = `[${getPdpBugReportSourceLabel(report.source)} 문의] ${report.title}`;
   const text = buildBugReportEmailText(report);
   const html = buildBugReportEmailHtml(report);
 
@@ -744,6 +746,8 @@ function parseReport(line: string, storagePath: string): PdpBugReportRecord | nu
     return {
       ...parsed,
       status: normalizeStatusFilter(parsed.status) || "new",
+      // source가 없던 시절 신고는 PDP Maker 3.0으로 본다.
+      source: normalizeBugSource(parsed.source),
       storagePath: parsed.storagePath || storagePath
     };
   } catch {

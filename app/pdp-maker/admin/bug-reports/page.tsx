@@ -10,8 +10,10 @@ import {
 } from "../../../../lib/pdp-server/pdp-bug-reports";
 import {
   getPdpBugReportCategoryLabel,
+  PDP_BUG_REPORT_SOURCES,
   type PdpBugReportAdminEvent,
   type PdpBugReportRecord,
+  type PdpBugReportSource,
   type PdpBugReportStatus
 } from "../../../../lib/shared/pdp-bug-report";
 import styles from "../../pdp-maker.module.css";
@@ -34,6 +36,17 @@ const STATUS_FILTERS: Array<{ value: "" | PdpBugReportStatus; label: string }> =
   { value: "archived", label: "보관" }
 ];
 
+// 어드민은 PDP Maker 3.0과 리디자인 마법사 1.5가 함께 쓴다. 제품은 source로 구분한다.
+const SOURCE_FILTERS: Array<{ value: "" | PdpBugReportSource; label: string }> = [
+  { value: "", label: "전체 제품" },
+  ...PDP_BUG_REPORT_SOURCES.map((item) => ({ value: item.value, label: item.label }))
+];
+
+const SOURCE_SHORT_LABELS: Record<PdpBugReportSource, string> = {
+  "pdp-maker-widget": "PDP 3.0",
+  "redesign-wizard-15": "마법사 1.5"
+};
+
 const STATUS_LABELS: Record<PdpBugReportStatus, string> = {
   new: "접수",
   reviewing: "확인",
@@ -44,6 +57,7 @@ const STATUS_LABELS: Record<PdpBugReportStatus, string> = {
 interface PdpMakerBugReportsAdminPageProps {
   searchParams?: {
     status?: string;
+    source?: string;
     login?: string;
     updated?: string;
     memo?: string;
@@ -57,10 +71,14 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
   const tokenConfigured = isPdpBugReportAdminTokenConfigured();
   const authorized = isPdpBugReportAdminSessionAuthorized(adminSession);
   const activeStatus = normalizeStatus(searchParams?.status);
+  const activeSource = normalizeSource(searchParams?.source);
   const highlightReportId = searchParams?.updated || searchParams?.memo || searchParams?.draft || "";
-  const allReports = authorized ? await listPdpBugReports({ limit: 200 }) : [];
+  const everyReport = authorized ? await listPdpBugReports({ limit: 200 }) : [];
+  // 제품을 먼저 좁히고, 상태 카운트는 그 제품 안에서 센다.
+  const allReports = activeSource ? everyReport.filter((report) => report.source === activeSource) : everyReport;
   const reports = activeStatus ? allReports.filter((report) => report.status === activeStatus) : allReports;
   const counts = countReports(allReports);
+  const sourceCounts = countSources(everyReport);
 
   return (
     <main className={styles.bugAdminPage}>
@@ -69,7 +87,7 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
           <div>
             <span className={styles.bugAdminKicker}>PDP Maker 3.0 Admin</span>
             <h1>버그신고 어드민</h1>
-            <p>우하단 신고 메뉴로 접수된 내용을 확인합니다. 신고 내용에는 원본 이미지와 API 키가 저장되지 않습니다.</p>
+            <p>PDP Maker 3.0과 리디자인 마법사 1.5의 문의를 함께 봅니다. 신고 내용에는 원본 이미지와 API 키가 저장되지 않습니다.</p>
           </div>
           <div className={styles.bugAdminActions}>
             <Link className={styles.secondaryButton} href="/pdp-maker">
@@ -103,7 +121,7 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
             ) : null}
             <form action="/api/pdp/bug-reports/admin-login" className={styles.bugAdminAuthForm} method="post">
               <input name="token" placeholder="관리 토큰" type="password" />
-              <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus)} />
+              <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus, activeSource)} />
               <button className={styles.primaryButton} type="submit">
                 확인
               </button>
@@ -112,11 +130,23 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
         ) : (
           <>
             <AdminNotice searchParams={searchParams} />
+            <nav className={styles.bugAdminSummary} aria-label="제품 필터">
+              {SOURCE_FILTERS.map((item) => (
+                <Link
+                  className={activeSource === item.value ? styles.bugAdminFilterActive : styles.bugAdminFilter}
+                  href={makeFilterHref(activeStatus, item.value)}
+                  key={item.value || "all-sources"}
+                >
+                  <span>{item.label}</span>
+                  <strong>{item.value ? sourceCounts[item.value] : sourceCounts.total}</strong>
+                </Link>
+              ))}
+            </nav>
             <nav className={styles.bugAdminSummary} aria-label="버그신고 상태 필터">
               {STATUS_FILTERS.map((item) => (
                 <Link
                   className={activeStatus === item.value ? styles.bugAdminFilterActive : styles.bugAdminFilter}
-                  href={makeFilterHref(item.value)}
+                  href={makeFilterHref(item.value, activeSource)}
                   key={item.value || "all"}
                 >
                   <span>{item.label}</span>
@@ -129,6 +159,7 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
               <section className={styles.bugAdminList}>
                 {reports.map((report) => (
                   <BugReportAdminCard
+                    activeSource={activeSource}
                     activeStatus={activeStatus}
                     defaultOpen={report.id === highlightReportId}
                     key={report.id}
@@ -139,7 +170,7 @@ export default async function PdpMakerBugReportsAdminPage({ searchParams }: PdpM
             ) : (
               <section className={styles.bugAdminEmpty}>
                 <strong>접수된 신고가 없습니다.</strong>
-                <p>사용자가 우하단 신고 메뉴에서 접수하면 이곳에 표시됩니다.</p>
+                <p>사용자가 문의 메뉴에서 접수하면 이곳에 표시됩니다.</p>
               </section>
             )}
           </>
@@ -185,10 +216,12 @@ function AdminNotice({ searchParams }: { searchParams?: PdpMakerBugReportsAdminP
 }
 
 function BugReportAdminCard({
+  activeSource,
   activeStatus,
   defaultOpen,
   report
 }: {
+  activeSource: "" | PdpBugReportSource;
   activeStatus: "" | PdpBugReportStatus;
   defaultOpen?: boolean;
   report: PdpBugReportRecord;
@@ -209,6 +242,7 @@ function BugReportAdminCard({
           <div className={styles.bugAdminCardTitle}>
             <div className={styles.bugAdminBadges}>
               <span className={statusBadgeClass(report.status)}>{STATUS_LABELS[report.status]}</span>
+              <span className={styles.bugAdminBadge}>{SOURCE_SHORT_LABELS[report.source] ?? "PDP 3.0"}</span>
               <span className={styles.bugAdminBadge}>{getPdpBugReportCategoryLabel(report.category)}</span>
               {draftPending ? <span className={styles.bugAdminBadgeReviewing}>초안 대기</span> : null}
               {eventCount ? <span className={styles.bugAdminBadge}>로그 {eventCount}</span> : null}
@@ -261,7 +295,7 @@ function BugReportAdminCard({
           <form action="/api/pdp/bug-reports/admin-actions" className={styles.bugAdminStatusForm} method="post">
             <input name="action" type="hidden" value="status" />
             <input name="reportId" type="hidden" value={report.id} />
-            <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus)} />
+            <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus, activeSource)} />
             <textarea defaultValue={latestDraft.memo} maxLength={1200} name="memo" required rows={10} />
             <div className={styles.bugAdminStatusButtons}>
               <button className={styles.primaryButton} name="status" type="submit" value="resolved">
@@ -281,7 +315,7 @@ function BugReportAdminCard({
         <form action="/api/pdp/bug-reports/admin-actions" className={styles.bugAdminStatusForm} method="post">
           <input name="action" type="hidden" value="status" />
           <input name="reportId" type="hidden" value={report.id} />
-          <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus)} />
+          <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus, activeSource)} />
           <textarea
             maxLength={1200}
             name="memo"
@@ -313,7 +347,7 @@ function BugReportAdminCard({
         <form action="/api/pdp/bug-reports/admin-actions" className={styles.bugAdminMemoForm} method="post">
           <input name="action" type="hidden" value="memo" />
           <input name="reportId" type="hidden" value={report.id} />
-          <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus)} />
+          <input name="returnTo" type="hidden" value={makeFilterHref(activeStatus, activeSource)} />
           <textarea maxLength={1200} name="memo" placeholder="확인한 내용, 재현 방법, 처리 계획 등을 남겨주세요." required rows={3} />
           <button className={styles.secondaryButton} type="submit">
             <MessageSquareText size={15} />
@@ -378,10 +412,35 @@ function normalizeStatus(value?: string): "" | PdpBugReportStatus {
   return value === "new" || value === "reviewing" || value === "resolved" || value === "archived" ? value : "";
 }
 
-function makeFilterHref(status: "" | PdpBugReportStatus) {
+function countSources(reports: PdpBugReportRecord[]) {
+  const counts: Record<PdpBugReportSource | "total", number> = {
+    total: reports.length,
+    "pdp-maker-widget": 0,
+    "redesign-wizard-15": 0
+  };
+
+  reports.forEach((report) => {
+    if (report.source in counts) {
+      counts[report.source] += 1;
+    }
+  });
+
+  return counts;
+}
+
+function normalizeSource(source?: string): "" | PdpBugReportSource {
+  return SOURCE_FILTERS.some((item) => item.value && item.value === source)
+    ? (source as PdpBugReportSource)
+    : "";
+}
+
+function makeFilterHref(status: "" | PdpBugReportStatus, source: "" | PdpBugReportSource = "") {
   const params = new URLSearchParams();
   if (status) {
     params.set("status", status);
+  }
+  if (source) {
+    params.set("source", source);
   }
 
   const query = params.toString();
