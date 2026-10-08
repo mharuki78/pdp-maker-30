@@ -1,4 +1,4 @@
-# 한이룸의 상세페이지 마법사 3.0
+# 상세페이지 마법사
 
 This is the canonical source folder for PDP Maker 3.0.
 

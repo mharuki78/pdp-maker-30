@@ -58,7 +58,6 @@ import type {
   TextOverlay,
   WorkbenchTab
 } from "./pdp-drafts";
-import { PdpBugReportWidget } from "./PdpBugReportWidget";
 import { WaitingMiniGame } from "./WaitingMiniGames";
 import styles from "./pdp-maker.module.css";
 import { logPdpUsage } from "./pdp-usage-log";
@@ -207,7 +206,7 @@ const BASIC_SOLID_COLORS = [
   "#d8b65b",
   "#111111"
 ];
-const APP_TITLE = "한이룸의 상세페이지 마법사 3.0";
+const APP_TITLE = "상세페이지 마법사";
 const EDITOR_CANVAS_BASE_WIDTH = 460;
 const EXPORT_CANVAS_WIDTH = 1080;
 const TEXT_LAYOUT_COLORS = {
@@ -3331,23 +3330,6 @@ export function PdpEditor({
           </div>
         </div>
       ) : null}
-      <PdpBugReportWidget
-        context={{
-          surface: "editor",
-          outputMode,
-          aiProvider,
-          apiConnectionLabel,
-          sectionName: getDisplaySectionName(currentSection),
-          sectionIndex: currentSectionIndex + 1,
-          sectionCount: sections.length,
-          generatedCount,
-          missingImageCount,
-          workbenchTab,
-          isWorkbenchOpen: workbenchState.isOpen,
-          saveState,
-          errorMessage: errorMessage || undefined
-        }}
-      />
     </main>
   );
 }

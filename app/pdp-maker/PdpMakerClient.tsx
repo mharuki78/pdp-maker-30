@@ -22,7 +22,6 @@ import type {
 } from "@runacademy/shared";
 import type { PdpAppState, PdpDraftSummary, PdpEditorDraftState, PdpSourceMaterialDraft, PreparedImageDraft } from "./pdp-drafts";
 import { deletePdpDraft, getPdpDraft, listPdpDrafts, savePdpDraft } from "./pdp-drafts";
-import { PdpBugReportWidget } from "./PdpBugReportWidget";
 import { PdpEditor } from "./PdpEditor";
 import { PdpSettingsSheet } from "./PdpSettingsSheet";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../components/ui/sheet";
@@ -82,7 +81,7 @@ type SectionImageBatchResult = {
 };
 
 const INITIAL_HERO_SECTION_COUNT = 1;
-const APP_TITLE = "한이룸의 상세페이지 마법사 3.0";
+const APP_TITLE = "상세페이지 마법사";
 const NOTICE_DISMISSED_STORAGE_KEY = "hanirum-pdp-maker-notice-dismissed";
 const KNOWLEDGE_STORAGE_KEY = "hanirum-pdp-maker-knowledge-items";
 const MAX_KNOWLEDGE_ITEMS = 5;
@@ -3371,23 +3370,6 @@ export function PdpMakerClient() {
         onLoadDraft={(draftId) => void handleLoadDraft(draftId)}
         onOpenChange={setIsDraftsOpen}
         open={isDraftsOpen}
-      />
-      <PdpBugReportWidget
-        context={{
-          surface: "setup",
-          appState,
-          setupStep,
-          outputMode,
-          aiProvider: processingProvider,
-          selectedProviderLabel,
-          hasPreparedImage: Boolean(preparedImage),
-          hasModelImage: Boolean(modelImage),
-          modelImageUsage: modelImageUsage ?? "",
-          knowledgeItemCount: knowledgeItems.length,
-          hasActiveDraft: Boolean(activeDraftId),
-          saveState,
-          errorMessage: errorMessage || undefined
-        }}
       />
     </main>
   );
