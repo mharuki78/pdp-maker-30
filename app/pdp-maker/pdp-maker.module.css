@@ -5410,8 +5410,8 @@
   }
 
   .sidebarMenuButton {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   .sidebarNav,
@@ -5490,6 +5490,86 @@
 
   .detailsStage {
     padding: 0;
+  }
+
+  /* Keep one inset around uploads instead of nesting the desktop card insets. */
+  .uploadStage {
+    padding: 0;
+  }
+
+  .uploadStage > .panelIntro {
+    padding: 16px 16px 12px;
+  }
+
+  .uploadStage > .dropzone,
+  .uploadStage > .dropzoneActive,
+  .uploadStage > .uploadPreviewCard,
+  .uploadStage > .sourceMaterialList,
+  .uploadStage > .emptyStatePanel {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .uploadStage > .optionalUploadBlock,
+  .uploadStage > .additionalInfoBlock,
+  .uploadStage > .customerReviewBlock {
+    padding: 16px;
+    border-radius: 0;
+  }
+
+  .uploadStage .sectionHeading {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .sectionHeadingCopy {
+    min-width: 0;
+  }
+
+  .sectionHeadingCopy h2 {
+    font-size: 18px;
+    line-height: 1.45;
+    word-break: keep-all;
+  }
+
+  .sectionHeadingCopy p {
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .dropzone,
+  .dropzoneActive {
+    min-height: 190px;
+    padding: 18px 14px;
+    gap: 8px;
+  }
+
+  .dropzone strong {
+    font-size: 16px;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+
+  .dropzone p,
+  .dropzoneHint {
+    font-size: 13px;
+    line-height: 1.55;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .dropzoneCompact {
+    min-height: 150px;
+  }
+
+  .setupProgressItem,
+  .setupProgressItemActive {
+    padding: 10px;
+    gap: 6px;
+    min-height: 44px;
+    font-size: 12px;
   }
 
   .detailsStage > .panelIntro,
